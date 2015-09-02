@@ -2,15 +2,18 @@ var HEIGHT = 120;
 var WIDTH = 120;
 var W = 8;
 
+var CANVAS_HEIGHT = (HEIGHT + 1 / 2) * W;
+var CANVAS_WIDTH = (WIDTH + 1 / 2) * W;
+
 var INTERVAL_MS = 1;
 var STEPS_AT_ONCE = 100;
 
-var BACKGROUND_COLOUR = "#D7F7DD";
-var FOREGROUND_COLOUR = "#AB688B";
+var BACKGROUND_COLOUR = "#AB688B";
+var FOREGROUND_COLOUR = "#D7F7DD";
 
 var renderInitial = function(canvas) {
 	canvas.fillStyle = BACKGROUND_COLOUR;
-	canvas.fillRect(0, 0, (HEIGHT + 1 / 2) * W, (WIDTH + 1 / 2) * W);
+	canvas.fillRect(0, 0, CANVAS_HEIGHT, CANVAS_WIDTH);
 };
 
 var render = function(maze, painted, canvas) {
@@ -123,7 +126,7 @@ var setupDropdown = function() {
 $(document).ready(function() {
 	setupDropdown();
 
-	var canvas = $("<canvas/>", { id: "maze" }).prop({ height: (HEIGHT + 1 / 2) * W, width: (WIDTH + 1 / 2) * W });
+	var canvas = $("<canvas/>", { id: "maze" }).prop({ height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
 
 	$(".container").append(canvas);
 
@@ -192,16 +195,16 @@ $(document).ready(function() {
 		};
 
 
-		var faster_iterator = function() {
+		var fasterIterator = function() {
 			for (var i = 0; i < STEPS_AT_ONCE; i++) {
 				iterate();	
 			}
 
 			// If incomplete, iterate again
-			if (stack.length > 0) setTimeout(faster_iterator, INTERVAL_MS);
+			if (stack.length > 0) setTimeout(fasterIterator, INTERVAL_MS);
 		};
 		
-		setTimeout(faster_iterator, INTERVAL_MS);
+		setTimeout(fasterIterator, INTERVAL_MS);
 	};
 
 	runMaze();
