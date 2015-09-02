@@ -1,6 +1,6 @@
-var HEIGHT = 120;
-var WIDTH = 120;
-var W = 8;
+var HEIGHT = 50;
+var WIDTH = 50;
+var W = 10;
 
 var CANVAS_HEIGHT = (HEIGHT + 1 / 2) * W;
 var CANVAS_WIDTH = (WIDTH + 1 / 2) * W;
@@ -16,12 +16,13 @@ var renderInitial = function(canvas) {
 	canvas.fillRect(0, 0, CANVAS_HEIGHT, CANVAS_WIDTH);
 };
 
-var render = function(maze, painted, canvas) {
+var render = function(maze, painted, canvas, bfsState) {
 	for (var i = maze.length - 1; i >= 0; i--) {
 		for (var j = maze[i].length - 1; j >= 0; j--) {
 			// Colour in visited nodes
 			canvas.fillStyle = FOREGROUND_COLOUR;
-			if (!painted[i][j].visited && maze[i][j].visited) {
+			if (maze[i][j].visited) {//(!painted[i][j].visited && maze[i][j].visited) {
+				if (bfsState && bfsState[i][j].visited) canvas.fillStyle = "#0000FF";
 				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
 				painted[i][j].visited = true;
 			}
@@ -229,7 +230,7 @@ var breadthFirstSearch = function (canvas, maze, painted) {
 
 	queue.push(cur);
 
-	while (!found) {
+	var iterateBFS = function () {
 		bfsState[cur.x][cur.y].visited = true;
 		bfsState[cur.x][cur.y].dx = cur.dx;
 		bfsState[cur.x][cur.y].dy = cur.dy;
@@ -255,29 +256,37 @@ var breadthFirstSearch = function (canvas, maze, painted) {
 				cur = queue.shift();
 			} while (bfsState[cur.x][cur.y].visited && queue.length > 0);
 		}
-	}
 
-	var path = {
-		x: cur.x,
-		y: cur.y
+		render(maze, painted, canvas, bfsState);
+
+		if (!found) {
+			setTimeout(iterateBFS, INTERVAL_MS);
+		} else {
+			var path = {
+				x: cur.x,
+				y: cur.y
+			};
+
+			do {
+				maze[path.x][path.y].path = true;
+				if (bfsState[path.x][path.y].dx === 1 && path.x > 0) maze[path.x - 1][path.y].rightPath = true;
+				if (bfsState[path.x][path.y].dx === -1 && path.x < WIDTH - 1) maze[path.x][path.y].rightPath = true;
+				if (bfsState[path.x][path.y].dy === 1 && path.y > 0) maze[path.x][path.y - 1].bottomPath = true;
+				if (bfsState[path.x][path.y].dy === -1 && path.y < HEIGHT - 1) maze[path.x][path.y].bottomPath = true;
+
+				var dx = bfsState[path.x][path.y].dx;
+				var dy = bfsState[path.x][path.y].dy;
+
+				path.x -= dx;
+				path.y -= dy;
+
+			} while (path.x > 0 || path.y > 0);
+
+			render(maze, painted, canvas);
+		}
 	};
 
-	do {
-		maze[path.x][path.y].path = true;
-		if (bfsState[path.x][path.y].dx === 1 && path.x > 0) maze[path.x - 1][path.y].rightPath = true;
-		if (bfsState[path.x][path.y].dx === -1 && path.x < WIDTH - 1) maze[path.x][path.y].rightPath = true;
-		if (bfsState[path.x][path.y].dy === 1 && path.y > 0) maze[path.x][path.y - 1].bottomPath = true;
-		if (bfsState[path.x][path.y].dy === -1 && path.y < HEIGHT - 1) maze[path.x][path.y].bottomPath = true;
-
-		var dx = bfsState[path.x][path.y].dx;
-		var dy = bfsState[path.x][path.y].dy;
-
-		path.x -= dx;
-		path.y -= dy;
-
-	} while (path.x > 0 || path.y > 0);
-
-	render(maze, painted, canvas);
+	setTimeout(iterateBFS, INTERVAL_MS);
 };
 
 $(document).ready(function() {
