@@ -1,27 +1,45 @@
 var HEIGHT = 80;
 var WIDTH = 80;
-var W = 12;
+var W = 6;
 
 var INTERVAL_MS = 1;
-var STEPS_AT_ONCE = 50;
+var STEPS_AT_ONCE = 100;
+
+var UNVISITED = 0;
+var ON_THE_STACK = 1;
+var VISITED = 2;
 
 var BACKGROUND_COLOUR = "#D7F7DD";
 var FOREGROUND_COLOUR = "#AB688B";
+var ON_THE_STACK_COLOUR = "#00FF00";
 
-var render = function(maze, canvas) {
+var renderInitial = function(canvas) {
 	canvas.fillStyle = BACKGROUND_COLOUR;
 	canvas.fillRect(0, 0, (HEIGHT + 1 / 2) * W, (WIDTH + 1 / 2) * W);
+};
 
+var render = function(maze, painted, canvas) {
 	for (var i = maze.length - 1; i >= 0; i--) {
 		for (var j = maze[i].length - 1; j >= 0; j--) {
 			// Colour in visited nodes
 			canvas.fillStyle = FOREGROUND_COLOUR;
-			if (maze[i][j].visited) canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
+			if (!painted[i][j].visited && maze[i][j].visited) {
+				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
+				painted[i][j].visited = true;
+			}
 			
 			// Colour in the bottom or right walls depending on if they're broken
 			canvas.fillStyle = FOREGROUND_COLOUR;
-			if (!maze[i][j].bottom) canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W + W / 2, W / 2, W / 2);
-			if (!maze[i][j].right) canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
+			if (painted[i][j].bottom !== VISITED && maze[i][j].bottom !== UNVISITED) {
+				canvas.fillStyle = maze[i][j].bottom === ON_THE_STACK ? ON_THE_STACK_COLOUR : FOREGROUND_COLOUR; 
+				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W + W / 2, W / 2, W / 2);
+				painted[i][j].bottom = maze[i][j].bottom;
+			}
+			if (painted[i][j].right !== VISITED && maze[i][j].bottom !== UNVISITED) {
+				canvas.fillStyle = maze[i][j].right === ON_THE_STACK ? ON_THE_STACK_COLOUR : FOREGROUND_COLOUR; 
+				canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
+				painted[i][j].right = maze[i][j].bottom;
+			}
 		};
 	};
 };
@@ -36,8 +54,8 @@ var create2dArray = function(width, height) {
 		for (var j = a[i].length - 1; j >= 0; j--) {
 			a[i][j] = {
 				visited: false,
-				right: true,
-				bottom: true
+				right: UNVISITED,
+				bottom: UNVISITED
 			};
 		};
 	};
@@ -119,7 +137,12 @@ $(document).ready(function() {
 	var c = canvas[0].getContext("2d");
 
 	var runMaze = function() {
+		// Keeps track of the maze
 		var maze = create2dArray(HEIGHT, WIDTH);
+		// Keeps track of whats already been painted
+		var painted = create2dArray(HEIGHT, WIDTH);
+
+		renderInitial(c);
 
 		var cur = {
 			x: 0,
@@ -141,15 +164,19 @@ $(document).ready(function() {
 			// Add possible paths to stack
 			if (cur.x > 0 && !maze[cur.x - 1][cur.y].visited) {
 				neighbours.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });	
+				maze[cur.x - 1][cur.y].right = ON_THE_STACK;
 			} 
 			if (cur.x < WIDTH - 1 && !maze[cur.x + 1][cur.y].visited) {
 				neighbours.push({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0 });	
+				maze[cur.x][cur.y].right = ON_THE_STACK;
 			} 
 			if (cur.y > 0 && !maze[cur.x][cur.y - 1].visited) {
 				neighbours.push({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1 });	
+				maze[cur.x][cur.y - 1].bottom = ON_THE_STACK;
 			} 
 			if (cur.y < HEIGHT - 1 && !maze[cur.x][cur.y + 1].visited) {
 				neighbours.push({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1 });	
+				maze[cur.x][cur.y].bottom = ON_THE_STACK;
 			}
 
 			// Sort via path criteria
@@ -166,13 +193,13 @@ $(document).ready(function() {
 			}
 
 			// Mark the wall to the new path as destroyed
-			if (cur.dx === 1 && cur.x > 0) maze[cur.x - 1][cur.y].right = false;
-			if (cur.dy === 1 && cur.y > 0) maze[cur.x][cur.y - 1].bottom = false;
-			if (cur.dx === -1) maze[cur.x][cur.y].right = false;
-			if (cur.dy === -1) maze[cur.x][cur.y].bottom = false;
+			if (cur.dx === 1 && cur.x > 0) maze[cur.x - 1][cur.y].right = VISITED;
+			if (cur.dy === 1 && cur.y > 0) maze[cur.x][cur.y - 1].bottom = VISITED;
+			if (cur.dx === -1) maze[cur.x][cur.y].right = VISITED;
+			if (cur.dy === -1) maze[cur.x][cur.y].bottom = VISITED;
 
 			// Render the maze in its current state
-			if (i++ % STEPS_AT_ONCE === 0 || stack.length === 0) render(maze, c);
+			if (i++ % STEPS_AT_ONCE === 0 || stack.length === 0) render(maze, painted, c);
 		};
 
 
