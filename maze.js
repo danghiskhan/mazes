@@ -25,7 +25,7 @@ var render = function(maze, painted, canvas) {
 				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
 				painted[i][j].visited = true;
 			}
-			
+
 			// Colour in the bottom or right walls depending on if they're broken
 			canvas.fillStyle = FOREGROUND_COLOUR;
 			if (painted[i][j].bottom && !maze[i][j].bottom) {
@@ -36,15 +36,15 @@ var render = function(maze, painted, canvas) {
 				canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
 				painted[i][j].right = false;
 			}
-		};
-	};
+		}
+	}
 };
 
 var create2dArray = function(width, height) {
 	var a = new Array(width);
-	for (var i = a.length - 1; i >= 0; i--) {
-		a[i] = new Array(height);
-	};
+	for (var n = a.length - 1; n >= 0; n--) {
+		a[n] = new Array(height);
+	}
 
 	for (var i = a.length - 1; i >= 0; i--) {
 		for (var j = a[i].length - 1; j >= 0; j--) {
@@ -53,11 +53,11 @@ var create2dArray = function(width, height) {
 				right: true,
 				bottom: true
 			};
-		};
-	};
+		}
+	}
 
 	return a;
-}
+};
 
 // Randomly chooses path
 var randomPath = function(paths) {
@@ -110,8 +110,8 @@ var outerBias = function(paths) {
 var biases = [
 	{ name: 'Outer Bias', fun: outerBias },
 	{ name: 'Center Bias', fun: centerBias },
-	{ name: 'Random', fun: randomPath }, 
-	{ name: 'Horizontal Bias', fun: horizontalBias }, 
+	{ name: 'Random', fun: randomPath },
+	{ name: 'Horizontal Bias', fun: horizontalBias },
 	{ name: 'Diagonal Bias', fun: diagonalBias }
 ];
 
@@ -159,16 +159,16 @@ $(document).ready(function() {
 
 			// Add possible paths to stack
 			if (cur.x > 0 && !maze[cur.x - 1][cur.y].visited) {
-				neighbours.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });	
-			} 
+				neighbours.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });
+			}
 			if (cur.x < WIDTH - 1 && !maze[cur.x + 1][cur.y].visited) {
-				neighbours.push({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0 });	
-			} 
+				neighbours.push({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0 });
+			}
 			if (cur.y > 0 && !maze[cur.x][cur.y - 1].visited) {
-				neighbours.push({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1 });	
-			} 
+				neighbours.push({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1 });
+			}
 			if (cur.y < HEIGHT - 1 && !maze[cur.x][cur.y + 1].visited) {
-				neighbours.push({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1 });	
+				neighbours.push({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1 });
 			}
 
 			// Sort via path criteria
@@ -197,13 +197,13 @@ $(document).ready(function() {
 
 		var fasterIterator = function() {
 			for (var i = 0; i < STEPS_AT_ONCE; i++) {
-				iterate();	
+				iterate();
 			}
 
 			// If incomplete, iterate again
 			if (stack.length > 0) setTimeout(fasterIterator, INTERVAL_MS);
 		};
-		
+
 		setTimeout(fasterIterator, INTERVAL_MS);
 	};
 
@@ -213,4 +213,3 @@ $(document).ready(function() {
 		runMaze();
 	});
 });
-
