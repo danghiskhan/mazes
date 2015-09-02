@@ -1,18 +1,24 @@
 var HEIGHT = 30;
 var WIDTH = 30;
-var W = 50;
+var W = 20;
 
-var ITERATION_MS = 1;
+var INTERVAL_MS = 1;
+
+var BACKGROUND_COLOUR = "#D7F7DD";
+var FOREGROUND_COLOUR = "#AB688B";
 
 var render = function(maze, canvas) {
-	canvas.fillStyle = "#000000";
+	canvas.fillStyle = BACKGROUND_COLOUR;
 	canvas.fillRect(0, 0, (HEIGHT + 1 / 2) * W, (WIDTH + 1 / 2) * W);
 
 	for (var i = maze.length - 1; i >= 0; i--) {
 		for (var j = maze[i].length - 1; j >= 0; j--) {
-			canvas.fillStyle = "#00FF00";
+			// Colour in visited nodes
+			canvas.fillStyle = FOREGROUND_COLOUR;
 			if (maze[i][j].visited) canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
-			canvas.fillStyle = "#00FFFF";
+			
+			// Colour in the bottom or right walls depending on if they're broken
+			canvas.fillStyle = FOREGROUND_COLOUR;
 			if (!maze[i][j].bottom) canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W + W / 2, W / 2, W / 2);
 			if (!maze[i][j].right) canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
 		};
@@ -60,6 +66,7 @@ $(document).ready(function() {
 
 		var neighbours = [];
 
+		// Add possible paths to stack
 		if (cur.x > 0 && !maze[cur.x - 1][cur.y].visited) {
 			neighbours.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });	
 		} 
@@ -77,23 +84,24 @@ $(document).ready(function() {
 			stack.push(neighbours.splice(Math.random() * neighbours.length, 1)[0]);
 		}
 
-		var newCur = stack.pop();
-
-		while (maze[newCur.x][newCur.y].visited) {
-			newCur = stack.pop();
+		// Get the next path ignoring paths to already visited nodes
+		cur = stack.pop();
+		while (maze[cur.x][cur.y].visited) {
+			cur = stack.pop();
 		}
 
-		if (newCur.dx === 1 && newCur.x > 0) maze[newCur.x - 1][newCur.y].right = false;
-		if (newCur.dy === 1 && newCur.y > 0) maze[newCur.x][newCur.y - 1].bottom = false;
-		if (newCur.dx === -1) maze[newCur.x][newCur.y].right = false;
-		if (newCur.dy === -1) maze[newCur.x][newCur.y].bottom = false;
+		// Mark the wall to the new path as destroyed
+		if (cur.dx === 1 && cur.x > 0) maze[cur.x - 1][cur.y].right = false;
+		if (cur.dy === 1 && cur.y > 0) maze[cur.x][cur.y - 1].bottom = false;
+		if (cur.dx === -1) maze[cur.x][cur.y].right = false;
+		if (cur.dy === -1) maze[cur.x][cur.y].bottom = false;
 
-		cur = newCur;
-	
+		// Render the maze in its current state
 		render(maze, c);
-		if (stack.length > 0) setTimeout(iterate, ITERATION_MS);
+		// If incomplete, iterate again
+		if (stack.length > 0) setTimeout(iterate, INTERVAL_MS);
 	};
 	
-	setTimeout(iterate, ITERATION_MS);
+	setTimeout(iterate, INTERVAL_MS);
 });
 
