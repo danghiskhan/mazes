@@ -1,8 +1,9 @@
-var HEIGHT = 30;
-var WIDTH = 30;
-var W = 20;
+var HEIGHT = 80;
+var WIDTH = 80;
+var W = 8;
 
 var INTERVAL_MS = 1;
+var STEPS_AT_ONCE = 50;
 
 var BACKGROUND_COLOUR = "#D7F7DD";
 var FOREGROUND_COLOUR = "#AB688B";
@@ -61,7 +62,11 @@ $(document).ready(function() {
 	var stack = [];
 	stack.push(cur);
 
+	var i = 0;
+
 	var iterate = function() {
+		if (stack.length === 0) return;
+
 		maze[cur.x][cur.y].visited = true;
 
 		var neighbours = [];
@@ -86,7 +91,7 @@ $(document).ready(function() {
 
 		// Get the next path ignoring paths to already visited nodes
 		cur = stack.pop();
-		while (maze[cur.x][cur.y].visited) {
+		while (stack.length > 0 && maze[cur.x][cur.y].visited) {
 			cur = stack.pop();
 		}
 
@@ -97,11 +102,19 @@ $(document).ready(function() {
 		if (cur.dy === -1) maze[cur.x][cur.y].bottom = false;
 
 		// Render the maze in its current state
-		render(maze, c);
+		if (i++ % STEPS_AT_ONCE === 0 || stack.length === 0) render(maze, c);
+	};
+
+
+	var faster_iterator = function() {
+		for (var i = 0; i < STEPS_AT_ONCE; i++) {
+			iterate();	
+		}
+
 		// If incomplete, iterate again
-		if (stack.length > 0) setTimeout(iterate, INTERVAL_MS);
+		if (stack.length > 0) setTimeout(faster_iterator, INTERVAL_MS);
 	};
 	
-	setTimeout(iterate, INTERVAL_MS);
+	setTimeout(faster_iterator, INTERVAL_MS);
 });
 
