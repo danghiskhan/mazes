@@ -28,7 +28,17 @@ var create2dArray = function(width, height, cellInfo) {
 	return a;
 };
 
+// Canvas paintbuffer
 var paintBuffer = null;
+
+// Prevent rendering issues by only allowing one timeout instance at a time
+var timeout = null;
+var startTimeout = function(f, ms) {
+	if (timeout !== null) {
+		clearTimeout(timeout);
+	}
+	timeout = setTimeout(f, ms);	
+};
 
 var renderInitial = function(canvas) {
 	canvas.fillStyle = WALL_COLOUR;
@@ -258,13 +268,13 @@ var createMaze = function(c, maze, doneCallback) {
 		render(maze, c);
 		// If incomplete, iterate again
 		if (!done) {
-			setTimeout(fasterIterator, INTERVAL_MS);
+			startTimeout(fasterIterator, INTERVAL_MS);
 		} else {
 			if (doneCallback) doneCallback();
 		}
 	};
 
-	setTimeout(fasterIterator, INTERVAL_MS);
+	startTimeout(fasterIterator, INTERVAL_MS);
 };
 
 var breadthFirstSearch = function (canvas, maze, doneCallback) {
@@ -327,7 +337,7 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 		render(maze, canvas, bfsState)
 		// If incomplete, iterate again
 		if (!done) {
-			setTimeout(fasterIterator, INTERVAL_MS);
+			startTimeout(fasterIterator, INTERVAL_MS);
 		} else {
 			// Now find solution path
 			var path = {
@@ -358,7 +368,7 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 		}
 	};
 
-	setTimeout(fasterIterator, INTERVAL_MS);
+	startTimeout(fasterIterator, INTERVAL_MS);
 };
 
 $(document).ready(function() {
@@ -373,7 +383,7 @@ $(document).ready(function() {
 
 	var startSearch = function () {
 		breadthFirstSearch(c, maze, function() {
-			setTimeout(function() {
+			startTimeout(function() {
 				maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
 				createMaze(c, maze, startSearch);
 			}, 5000);
