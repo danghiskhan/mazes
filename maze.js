@@ -1,17 +1,19 @@
 var HEIGHT = 100;
-var WIDTH = 100;
-var W = 10;
+var WIDTH = 120;
+var W = 6;
 
 var CANVAS_HEIGHT = (HEIGHT + 1 / 2) * W;
 var CANVAS_WIDTH = (WIDTH + 1 / 2) * W;
 
-var INTERVAL_MS = 1;
-var STEPS_AT_ONCE = 50;
+var INTERVAL_MS = 10;
+var PAUSE_BEFORE_RESTART_MS = 5000;
 
 var WALL_COLOUR = "#898BB8";
 var MAZE_COLOUR = "#F9FAE5";
 var PATHFINDER_COLOUR = "#45577a";
 var SOLUTION_COLOUR = "#f2c03e";
+
+var stepsAtOnce = 50;
 
 var create2dArray = function(width, height, cellInfo) {
 	var a = new Array(width);
@@ -42,7 +44,7 @@ var startTimeout = function(f, ms) {
 
 var renderInitial = function(canvas) {
 	canvas.fillStyle = WALL_COLOUR;
-	canvas.fillRect(0, 0, CANVAS_HEIGHT, CANVAS_WIDTH);
+	canvas.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 	paintBuffer = create2dArray(WIDTH, HEIGHT, function () {
 		return {
 			pos: null,
@@ -181,19 +183,34 @@ var topLeftBias = function(paths) {
 
 
 var biases = [
+	{ name: 'Random', fun: randomPath },
 	{ name: 'Top Left Bias', fun: topLeftBias },
 	{ name: 'Horizontal Bias', fun: horizontalBias },
-	{ name: 'Random', fun: randomPath },
 	{ name: 'Outer Bias', fun: outerBias },
 	{ name: 'Center Bias', fun: centerBias },
 	{ name: 'Diagonal Bias', fun: diagonalBias }
 ];
 
-var setupDropdown = function() {
-	var dropdown = 	$('#biases');
+var searchAlgos = [
+	{ name: 'Flood Fill (Breadth First Search)' },
+	{ name: 'Depth First Search' }
+];
+
+var setupControls = function() {
+	var biasesDropdown = $('#biases');
 
 	$.each(biases, function(index, value) {
-		dropdown.append($("<option />").val(index).text(value.name));
+		biasesDropdown.append($("<option />").val(index).text(value.name));
+	});
+
+	var searchAlgoDropdown = $('#search-algo');
+
+	$.each(searchAlgos, function(index, value) {
+		searchAlgoDropdown.append($("<option />").val(index).text(value.name));
+	});
+
+	$('#sim-speed').on('change mousemove', function(e) {
+		stepsAtOnce = this.valueAsNumber;
 	});
 };
 
@@ -259,7 +276,7 @@ var createMaze = function(c, maze, doneCallback) {
 		var done = false;
 		var i = 0;
 	
-		while (!done && i < STEPS_AT_ONCE) {
+		while (!done && i < stepsAtOnce) {
 			done = iterate();
 			i++;
 		}
@@ -278,7 +295,7 @@ var createMaze = function(c, maze, doneCallback) {
 };
 
 var breadthFirstSearch = function (canvas, maze, doneCallback) {
-	var bfsState = create2dArray(HEIGHT, WIDTH, bfsInfo);
+	var bfsState = create2dArray(WIDTH, HEIGHT, bfsInfo);
 	var queue = [];
 
 	var found = false;
@@ -316,19 +333,17 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 		}
 
 		do {
-			cur = queue.shift();
+			cur = (parseInt($('#search-algo').val()) === 0) ? queue.shift() : queue.pop();
 		} while (bfsState[cur.x][cur.y].visited && queue.length > 0);
 
 		return false;
-
-		// if (i++ % (STEPS_AT_ONCE) === 0) render(maze, canvas, bfsState);
 	};
 
 	var fasterIterator = function() {
 		var done = false;
 		var i = 0;
 	
-		while (!done && i < STEPS_AT_ONCE) {
+		while (!done && i < stepsAtOnce) {
 			done = iterateBFS();
 			i++;
 		}
@@ -372,28 +387,28 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 };
 
 $(document).ready(function() {
-	setupDropdown();
+	setupControls();
 
 	var canvas = $("<canvas/>", { id: "maze" }).prop({ height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
 	$(".container").append(canvas);
 	var c = canvas[0].getContext("2d");
 
 	// Keeps track of the maze
-	var maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
+	var maze = create2dArray(WIDTH, HEIGHT, mazeCellInfo);
 
 	var startSearch = function () {
 		breadthFirstSearch(c, maze, function() {
 			startTimeout(function() {
-				maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
+				maze = create2dArray(WIDTH, HEIGHT, mazeCellInfo);
 				createMaze(c, maze, startSearch);
-			}, 5000);
+			}, PAUSE_BEFORE_RESTART_MS);
 		});
 	};
 
 	createMaze(c, maze, startSearch);
 
 	$('#biases').change(function(e) {
-		maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
+		maze = create2dArray(WIDTH, HEIGHT, mazeCellInfo);
 		createMaze(c, maze, startSearch);
 	});
 });

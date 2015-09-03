@@ -11,8 +11,27 @@
 </head>
 <body>
 	<div class="container">
-		<select id="biases" class="form-control">
-		</select>
+		<h1>Cool Mazes</h1>
+		<div class="form-group col-sm-12 col-md-6">
+			<div class="input-group">
+				<div class="input-group-addon">Maze Creation Bias</div>
+				<select id="biases" class="form-control"></select>
+			</div>
+		</div>
+		<div class="form-group col-sm-12 col-md-6">
+			<div class="input-group">
+				<div class="input-group-addon">Search Algorithm</div>
+				<select id="search-algo" class="form-control"></select>
+			</div>
+		</div>
+		<div class="form-group col-sm-12 col-md-6">
+			<div class="input-group">
+				<div class="input-group-addon">Simulation Speed</div>
+				<div class="form-control">
+					<input type="range" id="sim-speed" value="50" min="1" max="200" />
+				</div>
+			</div>
+		</div>
 	</div>
 </body>
 </html>
