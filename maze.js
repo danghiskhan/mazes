@@ -1,6 +1,6 @@
-var HEIGHT = 50;
-var WIDTH = 50;
-var W = 10;
+var HEIGHT = 100;
+var WIDTH = 100;
+var W = 8;
 
 var CANVAS_HEIGHT = (HEIGHT + 1 / 2) * W;
 var CANVAS_WIDTH = (WIDTH + 1 / 2) * W;
@@ -10,45 +10,82 @@ var STEPS_AT_ONCE = 100;
 
 var WALL_COLOUR = "#898BB8";
 var MAZE_COLOUR = "#F9FAE5";
-var PATHFINDER_COLOUR = "#746C73";
-var SOLUTION_COLOUR = "#A0BCE6";
+var PATHFINDER_COLOUR = "#45577a";
+var SOLUTION_COLOUR = "#f2c03e";
+
+var create2dArray = function(width, height, cellInfo) {
+	var a = new Array(width);
+	for (var n = a.length - 1; n >= 0; n--) {
+		a[n] = new Array(height);
+	}
+
+	for (var i = a.length - 1; i >= 0; i--) {
+		for (var j = a[i].length - 1; j >= 0; j--) {
+			a[i][j] = cellInfo();
+		}
+	}
+
+	return a;
+};
+
+var paintBuffer = null;
 
 var renderInitial = function(canvas) {
 	canvas.fillStyle = WALL_COLOUR;
 	canvas.fillRect(0, 0, CANVAS_HEIGHT, CANVAS_WIDTH);
+	paintBuffer = create2dArray(WIDTH, HEIGHT, function () {
+		return {
+			pos: null,
+			right: null,
+			bottom: null
+		};
+	});
 };
 
-var render = function(maze, painted, canvas, bfsState) {
+var paint = function (i, j, colour, cellType) {
+	if (paintBuffer[i][j][cellType] !== colour) {
+		paintBuffer[i][j][cellType] = colour;
+		return true;
+	}
+
+	return false;
+};
+
+var render = function(maze, canvas, bfsState) {
 	for (var i = maze.length - 1; i >= 0; i--) {
 		for (var j = maze[i].length - 1; j >= 0; j--) {
-			// Colour in visited nodes
+
+			// Colour in nodes
 			canvas.fillStyle = MAZE_COLOUR;
-			if (maze[i][j].visited) {//(!painted[i][j].visited && maze[i][j].visited) {
+			if (maze[i][j].visited) {
 				if (bfsState && bfsState[i][j].visited) canvas.fillStyle = PATHFINDER_COLOUR;
-				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
-				painted[i][j].visited = true;
+				if ('path' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
+
+				if (paint(i, j, canvas.fillStyle, 'pos')) {
+					canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
+				}
 			}
 
-			// Colour in the bottom or right walls depending on if they're broken
+			// Colour in the right walls
 			canvas.fillStyle = MAZE_COLOUR;
-			if (!maze[i][j].bottom) {//painted[i][j].bottom && !maze[i][j].bottom) {
-				if (bfsState && (bfsState[i][j].dy === -1 || (j < HEIGHT - 1 && bfsState[i][j + 1].dy === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
-				if ('bottomPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
-				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W + W / 2, W / 2, W / 2);
-				painted[i][j].bottom = false;
-			}
-			canvas.fillStyle = MAZE_COLOUR;
-			if (!maze[i][j].right) {//painted[i][j].right && !maze[i][j].right) {
+			if (!maze[i][j].right) {
 				if (bfsState && (bfsState[i][j].dx === -1 || (i < WIDTH - 1 && bfsState[i + 1][j].dx === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
 				if ('rightPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
-				canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
-				painted[i][j].right = false;
+
+				if (paint(i, j, canvas.fillStyle, 'right')) {
+					canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
+				}
 			}
 
-			// If cell part of path, colour
-			if ('path' in maze[i][j]) {
-				canvas.fillStyle = SOLUTION_COLOUR;
-				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
+			// Colour in the bottom walls
+			canvas.fillStyle = MAZE_COLOUR;
+			if (!maze[i][j].bottom) {
+				if (bfsState && (bfsState[i][j].dy === -1 || (j < HEIGHT - 1 && bfsState[i][j + 1].dy === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
+				if ('bottomPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
+
+				if (paint(i, j, canvas.fillStyle, 'bottom')) {
+					canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W + W / 2, W / 2, W / 2);
+				}
 			}
 		}
 	}
@@ -68,21 +105,6 @@ var bfsInfo = function () {
 		dx: 0,
 		dy: 0
 	};
-};
-
-var create2dArray = function(width, height, cellInfo) {
-	var a = new Array(width);
-	for (var n = a.length - 1; n >= 0; n--) {
-		a[n] = new Array(height);
-	}
-
-	for (var i = a.length - 1; i >= 0; i--) {
-		for (var j = a[i].length - 1; j >= 0; j--) {
-			a[i][j] = cellInfo();
-		}
-	}
-
-	return a;
 };
 
 // Randomly chooses path
@@ -134,9 +156,9 @@ var outerBias = function(paths) {
 
 
 var biases = [
+	{ name: 'Random', fun: randomPath },
 	{ name: 'Outer Bias', fun: outerBias },
 	{ name: 'Center Bias', fun: centerBias },
-	{ name: 'Random', fun: randomPath },
 	{ name: 'Horizontal Bias', fun: horizontalBias },
 	{ name: 'Diagonal Bias', fun: diagonalBias }
 ];
@@ -149,7 +171,7 @@ var setupDropdown = function() {
 	});
 };
 
-var runMaze = function(c, maze, painted) {
+var createMaze = function(c, maze, doneCallback) {
 	renderInitial(c);
 
 	var cur = {
@@ -162,8 +184,9 @@ var runMaze = function(c, maze, painted) {
 
 	var i = 0;
 
+	// Returns whether iteration is finished
 	var iterate = function() {
-		if (stack.length === 0) return;
+		if (stack.length === 0) return true;
 
 		maze[cur.x][cur.y].visited = true;
 
@@ -202,26 +225,33 @@ var runMaze = function(c, maze, painted) {
 		if (cur.dx === -1) maze[cur.x][cur.y].right = false;
 		if (cur.dy === -1) maze[cur.x][cur.y].bottom = false;
 
-		// Render the maze in its current state
-		if (i++ % STEPS_AT_ONCE === 0 || stack.length === 0) render(maze, painted, c);
-
-		if (stack.length === 0) breadthFirstSearch(c, maze, painted);
+		return false;
 	};
 
 
 	var fasterIterator = function() {
-		for (var i = 0; i < STEPS_AT_ONCE; i++) {
-			iterate();
+		var done = false;
+		var i = 0;
+	
+		while (!done && i < STEPS_AT_ONCE) {
+			done = iterate();
+			i++;
 		}
-
+	
+		// Render the maze in its current state
+		render(maze, c);
 		// If incomplete, iterate again
-		if (stack.length > 0) setTimeout(fasterIterator, INTERVAL_MS);
+		if (!done) {
+			setTimeout(fasterIterator, INTERVAL_MS);
+		} else {
+			if (doneCallback) doneCallback();
+		}
 	};
 
 	setTimeout(fasterIterator, INTERVAL_MS);
 };
 
-var breadthFirstSearch = function (canvas, maze, painted) {
+var breadthFirstSearch = function (canvas, maze) {
 	var bfsState = create2dArray(HEIGHT, WIDTH, bfsInfo);
 	var queue = [];
 
@@ -234,45 +264,64 @@ var breadthFirstSearch = function (canvas, maze, painted) {
 
 	queue.push(cur);
 
+	var i = 0;
+
 	var iterateBFS = function () {
 		bfsState[cur.x][cur.y].visited = true;
 		bfsState[cur.x][cur.y].dx = cur.dx;
 		bfsState[cur.x][cur.y].dy = cur.dy;
 
 		if (cur.x === WIDTH - 1 && cur.y === HEIGHT - 1) {
-			found = true;
-		} else {
-			// Add possible paths to queue
-			if (cur.x > 0 && !bfsState[cur.x - 1][cur.y].visited && !maze[cur.x - 1][cur.y].right) {
-				queue.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });
-			}
-			if (cur.x < WIDTH - 1 && !bfsState[cur.x + 1][cur.y].visited && !maze[cur.x][cur.y].right) {
-				queue.push({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0 });
-			}
-			if (cur.y > 0 && !bfsState[cur.x][cur.y - 1].visited && !maze[cur.x][cur.y - 1].bottom) {
-				queue.push({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1 });
-			}
-			if (cur.y < HEIGHT - 1 && !bfsState[cur.x][cur.y + 1].visited && !maze[cur.x][cur.y].bottom) {
-				queue.push({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1 });
-			}
-
-			do {
-				cur = queue.shift();
-			} while (bfsState[cur.x][cur.y].visited && queue.length > 0);
+			return true;
 		}
 
-		render(maze, painted, canvas, bfsState);
+		// Add possible paths to queue
+		if (cur.x > 0 && !bfsState[cur.x - 1][cur.y].visited && !maze[cur.x - 1][cur.y].right) {
+			queue.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });
+		}
+		if (cur.x < WIDTH - 1 && !bfsState[cur.x + 1][cur.y].visited && !maze[cur.x][cur.y].right) {
+			queue.push({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0 });
+		}
+		if (cur.y > 0 && !bfsState[cur.x][cur.y - 1].visited && !maze[cur.x][cur.y - 1].bottom) {
+			queue.push({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1 });
+		}
+		if (cur.y < HEIGHT - 1 && !bfsState[cur.x][cur.y + 1].visited && !maze[cur.x][cur.y].bottom) {
+			queue.push({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1 });
+		}
 
-		if (!found) {
-			setTimeout(iterateBFS, INTERVAL_MS);
+		do {
+			cur = queue.shift();
+		} while (bfsState[cur.x][cur.y].visited && queue.length > 0);
+
+		return false;
+
+		// if (i++ % (STEPS_AT_ONCE) === 0) render(maze, canvas, bfsState);
+	};
+
+	var fasterIterator = function() {
+		var done = false;
+		var i = 0;
+	
+		while (!done && i < STEPS_AT_ONCE) {
+			done = iterateBFS();
+			i++;
+		}
+	
+		// Render the maze in its current state
+		render(maze, canvas, bfsState)
+		// If incomplete, iterate again
+		if (!done) {
+			setTimeout(fasterIterator, INTERVAL_MS);
 		} else {
+			// Now find solution path
 			var path = {
 				x: cur.x,
 				y: cur.y
 			};
 
-			do {
-				maze[path.x][path.y].path = true;
+			maze[path.x][path.y].path = true;
+
+			while (path.x > 0 || path.y > 0) {
 				if (bfsState[path.x][path.y].dx === 1 && path.x > 0) maze[path.x - 1][path.y].rightPath = true;
 				if (bfsState[path.x][path.y].dx === -1 && path.x < WIDTH - 1) maze[path.x][path.y].rightPath = true;
 				if (bfsState[path.x][path.y].dy === 1 && path.y > 0) maze[path.x][path.y - 1].bottomPath = true;
@@ -284,13 +333,14 @@ var breadthFirstSearch = function (canvas, maze, painted) {
 				path.x -= dx;
 				path.y -= dy;
 
-			} while (path.x > 0 || path.y > 0);
+				maze[path.x][path.y].path = true;
+			}
 
-			render(maze, painted, canvas);
+			render(maze, canvas, bfsState);
 		}
 	};
 
-	setTimeout(iterateBFS, INTERVAL_MS);
+	setTimeout(fasterIterator, INTERVAL_MS);
 };
 
 $(document).ready(function() {
@@ -302,15 +352,15 @@ $(document).ready(function() {
 
 	// Keeps track of the maze
 	var maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
-	// Keeps track of whats already been painted
-	var painted = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
-	runMaze(c, maze, painted);
 
-	// breadthFirstSearch(c, maze, painted);
+	var startSearch = function () {
+		breadthFirstSearch(c, maze);
+	};
+
+	createMaze(c, maze, startSearch);
 
 	$('#biases').change(function(e) {
 		maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
-		painted = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
-		runMaze(c, maze, painted);
+		createMaze(c, maze, startSearch);
 	});
 });
