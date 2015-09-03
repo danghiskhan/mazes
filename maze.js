@@ -1,12 +1,12 @@
 var HEIGHT = 100;
 var WIDTH = 100;
-var W = 8;
+var W = 10;
 
 var CANVAS_HEIGHT = (HEIGHT + 1 / 2) * W;
 var CANVAS_WIDTH = (WIDTH + 1 / 2) * W;
 
 var INTERVAL_MS = 1;
-var STEPS_AT_ONCE = 100;
+var STEPS_AT_ONCE = 50;
 
 var WALL_COLOUR = "#898BB8";
 var MAZE_COLOUR = "#F9FAE5";
@@ -121,14 +121,18 @@ var randomPath = function(paths) {
 // Biased towards horizontal paths
 var horizontalBias = function(paths) {
 	return paths.sort(function(a, b) {
-		return Math.abs(a.dx) + Math.abs(b.dx) - Math.random() * 8;
+		var horScore = function(pos) {
+			return Math.abs(pos.dx) - Math.abs(pos.dy);
+		};
+
+		return (horScore(b) - horScore(a)) * (1 - Math.random() * 1.2) + 0.5 - Math.random();
 	});
 };
 
 // Biased towards diagonal paths
 var diagonalBias = function(paths) {
 	return paths.sort(function(a, b) {
-		return 1 + Math.abs(a.x) + Math.abs(a.y) - Math.abs(b.x) - Math.abs(b.y) - Math.random() * 4;
+		return (Math.abs(a.x) + Math.abs(a.y) - Math.abs(b.x) - Math.abs(b.y)) * (1 - Math.random() * 2) + 0.5 - Math.random();
 	});
 };
 
@@ -139,7 +143,7 @@ var centerBias = function(paths) {
 			return Math.abs(pos.x - WIDTH / 2) + Math.abs(pos.y - HEIGHT / 2);
 		};
 
-		return 1 + distToCenter(a) - distToCenter(b) - Math.random() * 2;
+		return (distToCenter(a) - distToCenter(b)) * (1 - Math.random() * 1.2) + 0.5 - Math.random();
 	});
 };
 
@@ -150,16 +154,28 @@ var outerBias = function(paths) {
 			return Math.abs(pos.x - WIDTH / 2) + Math.abs(pos.y - HEIGHT / 2);
 		};
 
-		return 1 + distToCenter(b) - distToCenter(a) - Math.random() * 2;
+		return (distToCenter(b) - distToCenter(a)) * (1 - Math.random() * 2) + 0.5 - Math.random();
+	});
+};
+
+// Top left bias
+var topLeftBias = function(paths) {
+	return paths.sort(function(a, b) {
+		var distToTopLeft = function(pos) {
+			return pos.x + pos.y;
+		};
+
+		return (distToTopLeft(b) - distToTopLeft(a)) * (1 - Math.random() * 2) + 0.5 - Math.random();
 	});
 };
 
 
 var biases = [
+	{ name: 'Top Left Bias', fun: topLeftBias },
+	{ name: 'Horizontal Bias', fun: horizontalBias },
 	{ name: 'Random', fun: randomPath },
 	{ name: 'Outer Bias', fun: outerBias },
 	{ name: 'Center Bias', fun: centerBias },
-	{ name: 'Horizontal Bias', fun: horizontalBias },
 	{ name: 'Diagonal Bias', fun: diagonalBias }
 ];
 
@@ -251,7 +267,7 @@ var createMaze = function(c, maze, doneCallback) {
 	setTimeout(fasterIterator, INTERVAL_MS);
 };
 
-var breadthFirstSearch = function (canvas, maze) {
+var breadthFirstSearch = function (canvas, maze, doneCallback) {
 	var bfsState = create2dArray(HEIGHT, WIDTH, bfsInfo);
 	var queue = [];
 
@@ -337,6 +353,8 @@ var breadthFirstSearch = function (canvas, maze) {
 			}
 
 			render(maze, canvas, bfsState);
+
+			doneCallback();
 		}
 	};
 
@@ -354,7 +372,12 @@ $(document).ready(function() {
 	var maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
 
 	var startSearch = function () {
-		breadthFirstSearch(c, maze);
+		breadthFirstSearch(c, maze, function() {
+			setTimeout(function() {
+				maze = create2dArray(HEIGHT, WIDTH, mazeCellInfo);
+				createMaze(c, maze, startSearch);
+			}, 5000);
+		});
 	};
 
 	createMaze(c, maze, startSearch);
