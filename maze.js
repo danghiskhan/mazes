@@ -137,7 +137,7 @@ var horizontalBias = function(paths) {
 			return Math.abs(pos.dx) - Math.abs(pos.dy);
 		};
 
-		return (horScore(b) - horScore(a)) * (1 - Math.random() * 1.2) + 0.5 - Math.random();
+		return (horScore(b) - horScore(a)) * (1 - Math.random()) + 0.5 - Math.random();
 	});
 };
 
