@@ -8,11 +8,13 @@ var CANVAS_WIDTH = (WIDTH + 1 / 2) * W;
 var INTERVAL_MS = 1;
 var STEPS_AT_ONCE = 100;
 
-var BACKGROUND_COLOUR = "#AB688B";
-var FOREGROUND_COLOUR = "#D7F7DD";
+var WALL_COLOUR = "#898BB8";
+var MAZE_COLOUR = "#F9FAE5";
+var PATHFINDER_COLOUR = "#746C73";
+var SOLUTION_COLOUR = "#A0BCE6";
 
 var renderInitial = function(canvas) {
-	canvas.fillStyle = BACKGROUND_COLOUR;
+	canvas.fillStyle = WALL_COLOUR;
 	canvas.fillRect(0, 0, CANVAS_HEIGHT, CANVAS_WIDTH);
 };
 
@@ -20,30 +22,32 @@ var render = function(maze, painted, canvas, bfsState) {
 	for (var i = maze.length - 1; i >= 0; i--) {
 		for (var j = maze[i].length - 1; j >= 0; j--) {
 			// Colour in visited nodes
-			canvas.fillStyle = FOREGROUND_COLOUR;
+			canvas.fillStyle = MAZE_COLOUR;
 			if (maze[i][j].visited) {//(!painted[i][j].visited && maze[i][j].visited) {
-				if (bfsState && bfsState[i][j].visited) canvas.fillStyle = "#0000FF";
+				if (bfsState && bfsState[i][j].visited) canvas.fillStyle = PATHFINDER_COLOUR;
 				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
 				painted[i][j].visited = true;
 			}
 
 			// Colour in the bottom or right walls depending on if they're broken
-			canvas.fillStyle = FOREGROUND_COLOUR;
+			canvas.fillStyle = MAZE_COLOUR;
 			if (!maze[i][j].bottom) {//painted[i][j].bottom && !maze[i][j].bottom) {
-				if ('bottomPath' in maze[i][j]) canvas.fillStyle = "#FF0000";
+				if (bfsState && (bfsState[i][j].dy === -1 || (j < HEIGHT - 1 && bfsState[i][j + 1].dy === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
+				if ('bottomPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
 				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W + W / 2, W / 2, W / 2);
 				painted[i][j].bottom = false;
 			}
-			canvas.fillStyle = FOREGROUND_COLOUR;
+			canvas.fillStyle = MAZE_COLOUR;
 			if (!maze[i][j].right) {//painted[i][j].right && !maze[i][j].right) {
-				if ('rightPath' in maze[i][j]) canvas.fillStyle = "#FF0000";
+				if (bfsState && (bfsState[i][j].dx === -1 || (i < WIDTH - 1 && bfsState[i + 1][j].dx === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
+				if ('rightPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
 				canvas.fillRect((i + 1 / 2) * W + W / 2, (j + 1 / 2) * W, W / 2, W / 2);
 				painted[i][j].right = false;
 			}
 
 			// If cell part of path, colour
 			if ('path' in maze[i][j]) {
-				canvas.fillStyle = "#FF0000";
+				canvas.fillStyle = SOLUTION_COLOUR;
 				canvas.fillRect((i + 1 / 2) * W, (j + 1 / 2) * W, W / 2, W / 2);
 			}
 		}
