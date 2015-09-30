@@ -386,8 +386,89 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 	startTimeout(fasterIterator, INTERVAL_MS);
 };
 
+// Min heap implementation being implemented for practice
+function Heap(score) {
+	this.items = [];
+	this.score = score;
+}
+Heap.prototype = {
+	insert: function(item) {
+		var pos = this.items.length;
+
+		this.items[pos] = item;
+
+		var done = false; 
+
+		while (!done && pos !== 0) {
+			done = true;
+
+			if (this.score(this.items[pos]) < this.score(this.items[Math.floor(pos / 2)])) {
+				this.swap(pos, Math.floor(pos / 2));
+				pos = Math.floor(pos / 2);
+				done = false;
+			}
+		}
+	},
+	swap: function(a, b) {
+		console.log(a + ' ' + b);
+
+		var temp = this.items[a];
+		this.items[a] = this.items[b];
+		this.items[b] = temp;
+	},
+	peek: function() {
+		return this.items[0];
+	},
+	extract: function() {
+		var max = this.items[0];
+
+		var end = this.items.pop();
+		this.items[0] = end;
+
+		var done = false;
+		var pos = 0;
+
+		while (!done) {
+			done = true;
+
+			var swapPos = -1;
+
+			if (pos * 2 < this.items.length && this.score(this.items[pos]) > this.score(this.items[pos * 2])) {
+				swapPos = pos * 2;
+			}
+
+			if (pos * 2 + 1 < this.items.length && this.score(this.items[swapPos === - 1 ? pos : swapPos]) > this.score(this.items[pos * 2 + 1])) {
+				swapPos = pos * 2 + 1;
+			}
+
+			if (swapPos !== -1) {
+				this.swap(pos, swapPos);
+				pos = swapPos;
+				done = false;
+			}
+		}
+
+		return max;
+	}
+};
+
+var aStarSearch = function(canvas, maze, doneCallback) {
+	var heap = new Heap(function(a) {
+		return a;
+	});
+
+	for (var i = 0; i < 100; i++) {
+		heap.insert(Math.floor(Math.random() * 100));
+	}
+	for (var i = 0; i < 50; i++) {
+		console.log('' + heap.items);
+		console.log(heap.extract());
+	}
+};
+
 $(document).ready(function() {
 	setupControls();
+	aStarSearch();
 
 	var canvas = $("<canvas/>", { id: "maze" }).prop({ height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
 	$(".container").append(canvas);
