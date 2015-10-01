@@ -2,3 +2,7 @@ canvas {
 	display: block;
 	margin: 10 auto;
 }
+
+.title {
+	text-align: center;
+}

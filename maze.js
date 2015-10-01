@@ -191,6 +191,77 @@ var biases = [
 	{ name: 'Diagonal Bias', fun: diagonalBias }
 ];
 
+// Min heap implementation being implemented for practice
+function Heap(score) {
+	this.items = [];
+	this.score = score;
+}
+Heap.prototype = {
+	add: function(item) {
+		var pos = this.items.length;
+
+		this.items[pos] = item;
+
+		var done = false; 
+
+		while (!done && pos !== 0) {
+			done = true;
+
+			if (this.score(this.items[pos]) < this.score(this.items[Math.floor(pos / 2)])) {
+				this.swap(pos, Math.floor(pos / 2));
+				pos = Math.floor(pos / 2);
+				done = false;
+			}
+		}
+	},
+	swap: function(a, b) {
+		var temp = this.items[a];
+		this.items[a] = this.items[b];
+		this.items[b] = temp;
+	},
+	peek: function() {
+		return this.items[0];
+	},
+	extract: function() {
+		var max = this.items[0];
+
+		var end = this.items.pop();
+		this.items[0] = end;
+
+		var done = false;
+		var pos = 0;
+
+		while (!done) {
+			done = true;
+
+			var swapPos = -1;
+
+			if (pos * 2 < this.items.length && this.score(this.items[pos]) > this.score(this.items[pos * 2])) {
+				swapPos = pos * 2;
+			}
+
+			// Compare with other child if the other child is a swap candidate
+			var positionToCompare = swapPos === -1 ? pos : swapPos;
+			if (pos * 2 + 1 < this.items.length && this.score(this.items[positionToCompare]) > this.score(this.items[pos * 2 + 1])) {
+				swapPos = pos * 2 + 1;
+			}
+
+			if (swapPos !== -1) {
+				this.swap(pos, swapPos);
+				pos = swapPos;
+				done = false;
+			}
+		}
+
+		// console.log(this.items);
+
+		return max;
+	},
+	isEmpty: function() {
+		return this.items.length === 0;
+	}
+};
+
 var queue = function() {
 	var queue = [];
 
@@ -244,14 +315,12 @@ var searchAlgos = [
 
 var setupControls = function() {
 	var biasesDropdown = $('#biases');
-
-	$.each(biases, function(index, value) {
+	biases.forEach(function(value, index) {
 		biasesDropdown.append($("<option />").val(index).text(value.name));
 	});
 
 	var searchAlgoDropdown = $('#search-algo');
-
-	$.each(searchAlgos, function(index, value) {
+	searchAlgos.forEach(function(value, index) {
 		searchAlgoDropdown.append($("<option />").val(index).text(value.name));
 	});
 
@@ -431,75 +500,6 @@ var search = function (canvas, maze, doneCallback) {
 	};
 
 	startTimeout(fasterIterator, INTERVAL_MS);
-};
-
-// Min heap implementation being implemented for practice
-function Heap(score) {
-	this.items = [];
-	this.score = score;
-}
-Heap.prototype = {
-	add: function(item) {
-		var pos = this.items.length;
-
-		this.items[pos] = item;
-
-		var done = false; 
-
-		while (!done && pos !== 0) {
-			done = true;
-
-			if (this.score(this.items[pos]) < this.score(this.items[Math.floor(pos / 2)])) {
-				this.swap(pos, Math.floor(pos / 2));
-				pos = Math.floor(pos / 2);
-				done = false;
-			}
-		}
-	},
-	swap: function(a, b) {
-		var temp = this.items[a];
-		this.items[a] = this.items[b];
-		this.items[b] = temp;
-	},
-	peek: function() {
-		return this.items[0];
-	},
-	extract: function() {
-		var max = this.items[0];
-
-		var end = this.items.pop();
-		this.items[0] = end;
-
-		var done = false;
-		var pos = 0;
-
-		while (!done) {
-			done = true;
-
-			var swapPos = -1;
-
-			if (pos * 2 < this.items.length && this.score(this.items[pos]) > this.score(this.items[pos * 2])) {
-				swapPos = pos * 2;
-			}
-
-			if (pos * 2 + 1 < this.items.length && this.score(this.items[swapPos === - 1 ? pos : swapPos]) > this.score(this.items[pos * 2 + 1])) {
-				swapPos = pos * 2 + 1;
-			}
-
-			if (swapPos !== -1) {
-				this.swap(pos, swapPos);
-				pos = swapPos;
-				done = false;
-			}
-		}
-
-		// console.log(this.items);
-
-		return max;
-	},
-	isEmpty: function() {
-		return this.items.length === 0;
-	}
 };
 
 $(document).ready(function() {
