@@ -63,14 +63,14 @@ var paint = function (i, j, colour, cellType) {
 	return false;
 };
 
-var render = function(maze, canvas, bfsState) {
+var render = function(maze, canvas, searchState) {
 	for (var i = maze.length - 1; i >= 0; i--) {
 		for (var j = maze[i].length - 1; j >= 0; j--) {
 
 			// Colour in nodes
 			canvas.fillStyle = MAZE_COLOUR;
 			if (maze[i][j].visited) {
-				if (bfsState && bfsState[i][j].visited) canvas.fillStyle = PATHFINDER_COLOUR;
+				if (searchState && searchState[i][j].visited) canvas.fillStyle = PATHFINDER_COLOUR;
 				if ('path' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
 
 				if (paint(i, j, canvas.fillStyle, 'pos')) {
@@ -81,7 +81,7 @@ var render = function(maze, canvas, bfsState) {
 			// Colour in the right walls
 			canvas.fillStyle = MAZE_COLOUR;
 			if (!maze[i][j].right) {
-				if (bfsState && (bfsState[i][j].dx === -1 || (i < WIDTH - 1 && bfsState[i + 1][j].dx === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
+				if (searchState && (searchState[i][j].dx === -1 || (i < WIDTH - 1 && searchState[i + 1][j].dx === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
 				if ('rightPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
 
 				if (paint(i, j, canvas.fillStyle, 'right')) {
@@ -92,7 +92,7 @@ var render = function(maze, canvas, bfsState) {
 			// Colour in the bottom walls
 			canvas.fillStyle = MAZE_COLOUR;
 			if (!maze[i][j].bottom) {
-				if (bfsState && (bfsState[i][j].dy === -1 || (j < HEIGHT - 1 && bfsState[i][j + 1].dy === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
+				if (searchState && (searchState[i][j].dy === -1 || (j < HEIGHT - 1 && searchState[i][j + 1].dy === 1))) canvas.fillStyle = PATHFINDER_COLOUR;
 				if ('bottomPath' in maze[i][j]) canvas.fillStyle = SOLUTION_COLOUR;
 
 				if (paint(i, j, canvas.fillStyle, 'bottom')) {
@@ -191,9 +191,55 @@ var biases = [
 	{ name: 'Diagonal Bias', fun: diagonalBias }
 ];
 
+var queue = function() {
+	var queue = [];
+
+	return {
+		add: function(item) {
+			queue.push(item);
+		},
+		extract: function() {
+			return queue.shift();
+		},
+		isEmpty: function() {
+			return queue.length === 0;
+		}
+	};
+};
+
+var stack = function() {
+	var stack = [];
+
+	return {
+		add: function(item) {
+			stack.push(item);
+		},
+		extract: function() {
+			return stack.pop();
+		},
+		isEmpty: function() {
+			return stack.length === 0;
+		}
+	};
+};
+
+var aStar = function() {
+	return new Heap(function(item) {
+		return item.dist + Math.sqrt(Math.pow(WIDTH - item.x, 2), Math.pow(HEIGHT - item.y, 2));
+	});
+};
+
+var bestFirst = function() {
+	return new Heap(function(item) {
+		return Math.sqrt(Math.pow(WIDTH - item.x, 2), Math.pow(HEIGHT - item.y, 2));
+	});
+};
+
 var searchAlgos = [
-	{ name: 'Flood Fill (Breadth First Search)' },
-	{ name: 'Depth First Search' }
+	{ name: 'Flood Fill (Breadth First Search)', fun: queue },
+	{ name: 'Depth First Search', fun: stack },
+	{ name: 'Best First Search', fun: bestFirst },
+	{ name: 'A* Search', fun: aStar }
 ];
 
 var setupControls = function() {
@@ -294,47 +340,48 @@ var createMaze = function(c, maze, doneCallback) {
 	startTimeout(fasterIterator, INTERVAL_MS);
 };
 
-var breadthFirstSearch = function (canvas, maze, doneCallback) {
-	var bfsState = create2dArray(WIDTH, HEIGHT, bfsInfo);
-	var queue = [];
+var search = function (canvas, maze, doneCallback) {
+	var searchState = create2dArray(WIDTH, HEIGHT, bfsInfo);
+	var items = searchAlgos[parseInt($('#search-algo').val())].fun();
 
 	var found = false;
 
 	var cur = {
 		x: 0,
-		y: 0
+		y: 0,
+		dist: 0
 	};
 
-	queue.push(cur);
+	items.add(cur);
 
 	var i = 0;
 
 	var iterateBFS = function () {
-		bfsState[cur.x][cur.y].visited = true;
-		bfsState[cur.x][cur.y].dx = cur.dx;
-		bfsState[cur.x][cur.y].dy = cur.dy;
+		searchState[cur.x][cur.y].visited = true;
+		searchState[cur.x][cur.y].dx = cur.dx;
+		searchState[cur.x][cur.y].dy = cur.dy;
 
 		if (cur.x === WIDTH - 1 && cur.y === HEIGHT - 1) {
 			return true;
 		}
 
-		// Add possible paths to queue
-		if (cur.x > 0 && !bfsState[cur.x - 1][cur.y].visited && !maze[cur.x - 1][cur.y].right) {
-			queue.push({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0 });
+		// Add possible paths to items
+		if (cur.x > 0 && !searchState[cur.x - 1][cur.y].visited && !maze[cur.x - 1][cur.y].right) {
+			items.add({ x: cur.x - 1, y: cur.y, dx: -1, dy: 0, dist: cur.dist + 1 });
 		}
-		if (cur.x < WIDTH - 1 && !bfsState[cur.x + 1][cur.y].visited && !maze[cur.x][cur.y].right) {
-			queue.push({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0 });
+		if (cur.x < WIDTH - 1 && !searchState[cur.x + 1][cur.y].visited && !maze[cur.x][cur.y].right) {
+			items.add({ x: cur.x + 1, y: cur.y, dx: 1, dy: 0, dist: cur.dist + 1 });
 		}
-		if (cur.y > 0 && !bfsState[cur.x][cur.y - 1].visited && !maze[cur.x][cur.y - 1].bottom) {
-			queue.push({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1 });
+		if (cur.y > 0 && !searchState[cur.x][cur.y - 1].visited && !maze[cur.x][cur.y - 1].bottom) {
+			items.add({ x: cur.x, y: cur.y - 1, dx: 0, dy: -1, dist: cur.dist + 1 });
 		}
-		if (cur.y < HEIGHT - 1 && !bfsState[cur.x][cur.y + 1].visited && !maze[cur.x][cur.y].bottom) {
-			queue.push({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1 });
+		if (cur.y < HEIGHT - 1 && !searchState[cur.x][cur.y + 1].visited && !maze[cur.x][cur.y].bottom) {
+			items.add({ x: cur.x, y: cur.y + 1, dx: 0, dy: 1, dist: cur.dist + 1 });
 		}
 
 		do {
-			cur = (parseInt($('#search-algo').val()) === 0) ? queue.shift() : queue.pop();
-		} while (bfsState[cur.x][cur.y].visited && queue.length > 0);
+			cur = items.extract();
+		} while (searchState[cur.x][cur.y].visited && !items.isEmpty());
 
 		return false;
 	};
@@ -349,7 +396,7 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 		}
 	
 		// Render the maze in its current state
-		render(maze, canvas, bfsState)
+		render(maze, canvas, searchState)
 		// If incomplete, iterate again
 		if (!done) {
 			startTimeout(fasterIterator, INTERVAL_MS);
@@ -363,13 +410,13 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 			maze[path.x][path.y].path = true;
 
 			while (path.x > 0 || path.y > 0) {
-				if (bfsState[path.x][path.y].dx === 1 && path.x > 0) maze[path.x - 1][path.y].rightPath = true;
-				if (bfsState[path.x][path.y].dx === -1 && path.x < WIDTH - 1) maze[path.x][path.y].rightPath = true;
-				if (bfsState[path.x][path.y].dy === 1 && path.y > 0) maze[path.x][path.y - 1].bottomPath = true;
-				if (bfsState[path.x][path.y].dy === -1 && path.y < HEIGHT - 1) maze[path.x][path.y].bottomPath = true;
+				if (searchState[path.x][path.y].dx === 1 && path.x > 0) maze[path.x - 1][path.y].rightPath = true;
+				if (searchState[path.x][path.y].dx === -1 && path.x < WIDTH - 1) maze[path.x][path.y].rightPath = true;
+				if (searchState[path.x][path.y].dy === 1 && path.y > 0) maze[path.x][path.y - 1].bottomPath = true;
+				if (searchState[path.x][path.y].dy === -1 && path.y < HEIGHT - 1) maze[path.x][path.y].bottomPath = true;
 
-				var dx = bfsState[path.x][path.y].dx;
-				var dy = bfsState[path.x][path.y].dy;
+				var dx = searchState[path.x][path.y].dx;
+				var dy = searchState[path.x][path.y].dy;
 
 				path.x -= dx;
 				path.y -= dy;
@@ -377,7 +424,7 @@ var breadthFirstSearch = function (canvas, maze, doneCallback) {
 				maze[path.x][path.y].path = true;
 			}
 
-			render(maze, canvas, bfsState);
+			render(maze, canvas, searchState);
 
 			doneCallback();
 		}
@@ -392,7 +439,7 @@ function Heap(score) {
 	this.score = score;
 }
 Heap.prototype = {
-	insert: function(item) {
+	add: function(item) {
 		var pos = this.items.length;
 
 		this.items[pos] = item;
@@ -410,8 +457,6 @@ Heap.prototype = {
 		}
 	},
 	swap: function(a, b) {
-		console.log(a + ' ' + b);
-
 		var temp = this.items[a];
 		this.items[a] = this.items[b];
 		this.items[b] = temp;
@@ -448,27 +493,17 @@ Heap.prototype = {
 			}
 		}
 
+		// console.log(this.items);
+
 		return max;
-	}
-};
-
-var aStarSearch = function(canvas, maze, doneCallback) {
-	var heap = new Heap(function(a) {
-		return a;
-	});
-
-	for (var i = 0; i < 100; i++) {
-		heap.insert(Math.floor(Math.random() * 100));
-	}
-	for (var i = 0; i < 50; i++) {
-		console.log('' + heap.items);
-		console.log(heap.extract());
+	},
+	isEmpty: function() {
+		return this.items.length === 0;
 	}
 };
 
 $(document).ready(function() {
 	setupControls();
-	aStarSearch();
 
 	var canvas = $("<canvas/>", { id: "maze" }).prop({ height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
 	$(".container").append(canvas);
@@ -478,7 +513,7 @@ $(document).ready(function() {
 	var maze = create2dArray(WIDTH, HEIGHT, mazeCellInfo);
 
 	var startSearch = function () {
-		breadthFirstSearch(c, maze, function() {
+		search(c, maze, function() {
 			startTimeout(function() {
 				maze = create2dArray(WIDTH, HEIGHT, mazeCellInfo);
 				createMaze(c, maze, startSearch);
