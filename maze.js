@@ -356,7 +356,7 @@ var search = function (canvas, maze, doneCallback) {
 
 	var i = 0;
 
-	var iterateBFS = function () {
+	var iterateSearch = function () {
 		searchState[cur.x][cur.y].visited = true;
 		searchState[cur.x][cur.y].dx = cur.dx;
 		searchState[cur.x][cur.y].dy = cur.dy;
@@ -391,7 +391,7 @@ var search = function (canvas, maze, doneCallback) {
 		var i = 0;
 	
 		while (!done && i < stepsAtOnce) {
-			done = iterateBFS();
+			done = iterateSearch();
 			i++;
 		}
 	
